@@ -12,4 +12,5 @@ st.markdown('## Identifying Problems in Basic Data')
 with st.expander ('# Missing Values'):
     st.info ('Handling missing values')
 
-with st.expander ('# -')
+with st.expander ('# -'):
+    st.info ('...')
