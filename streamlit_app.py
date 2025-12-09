@@ -16,6 +16,7 @@ with st.expander('# Research Question'):
 st.markdown ('## Column Selection')
 with st.expander ('Selected Columns'):
     st.write('Selected columns are: age, sex, totchol, sysbp, diabp, cursmoke, cigpday, BMI, bpmeds, prevchd, prevap, prevmi, prevstrk, prevhyp, glucose, hyperten & diabetes')
+    #explain why these are chosen variables
     st.divider()
     data = pd.read_csv('https://raw.githubusercontent.com/LUCE-Blockchain/Databases-for-teaching/refs/heads/main/Framingham%20Dataset.csv')
     data.head()
@@ -26,16 +27,15 @@ with st.expander ('Selected Columns'):
     'HYPERTEN', 'DIABETES']
     df = data[selected_columns]
     st.dataframe(df, use_container_width=True, height=300)
-# add columns
 
 st.markdown('## Train-Test Split')
-
 with st.expander ('# Train-Test Split'):
     st.info('We .....')
 
 st.markdown('## Identifying Problems in the Basic Data')
 with st.expander ('# Missing Values'):
     st.info ('Handling missing values')
+    st.dataframe(df.isnull().sum(), use_container_width=True, height=300)
 
 with st.expander ('Imputation'):
     st.info ('...')
