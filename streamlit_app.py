@@ -44,7 +44,7 @@ from sklearn.model_selection import train_test_split
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-st.markdown('## Identifying Problems in the Basic Data')
+st.markdown('## Identifying Problems in the Data')
 
 with st.expander ('Capping'):
     st.info('We capped SYSBP, DIABP, TOTCHOL & BMI at plausible clinical ranges')
@@ -71,4 +71,57 @@ with st.expander ('# Missing Values'):
     st.dataframe(df.isnull().sum(), use_container_width=True, height=300)
 
 with st.expander ('Imputation'):
-    st.info ('...')
+    st.info ('We used several types of imputation depending on the variable.')
+    st.write ('For BMI & TOTCHOL: median imputation')
+    st.write ('For CIGPDAY: if CURSMOKE is 0, 0 imputation for CIGPDAY, if CURSMOKE is 1, use median imputation for CIGPDAY')
+    st.write('For BPMEDS: 0 imputation')
+    st.write('For GLUCOSE: GLUCOSE_missing indicator column with missing values imputed using the 70th percentile of GLUCOSE from X_train_capped')
+
+#BMI imputation
+median_bmi = X_train_capped['BMI'].median()
+X_train_capped['BMI'].fillna(median_bmi, inplace=True)
+X_test_capped['BMI'].fillna(median_bmi, inplace=True)
+
+#TOTCHOL imputation
+median_totchol = X_train_capped['TOTCHOL'].median()
+X_train_capped['TOTCHOL'] = X_train_capped['TOTCHOL'].fillna(median_totchol)
+X_test_capped['TOTCHOL'] = X_test_capped['TOTCHOL'].fillna(median_totchol)
+
+#CIGPDAY imputation
+X_train_capped.loc[(X_train_capped['CURSMOKE'] == 0) & (X_train_capped['CIGPDAY'].isnull()), 'CIGPDAY'] = 0
+X_test_capped.loc[(X_test_capped['CURSMOKE'] == 0) & (X_test_capped['CIGPDAY'].isnull()), 'CIGPDAY'] = 0
+median_cigpday_smoker = X_train_capped[X_train_capped['CURSMOKE'] == 1]['CIGPDAY'].median()
+X_train_capped['CIGPDAY'] = X_train_capped['CIGPDAY'].fillna(median_cigpday_smoker)
+X_test_capped['CIGPDAY'] = X_test_capped['CIGPDAY'].fillna(median_cigpday_smoker)
+
+#BPMEDS imputatio
+X_train_capped['BPMEDS'] = X_train_capped['BPMEDS'].fillna(0)
+X_test_capped['BPMEDS'] = X_test_capped['BPMEDS'].fillna(0)
+
+#GLUCOSE imputation
+X_train_capped['GLUCOSE_missing'] = X_train_capped['GLUCOSE'].isnull().astype(int)
+X_test_capped['GLUCOSE_missing'] = X_test_capped['GLUCOSE'].isnull().astype(int)
+percentile_70_glucose = X_train_capped['GLUCOSE'].quantile(0.80)
+X_train_capped['GLUCOSE'] = X_train_capped['GLUCOSE'].fillna(percentile_70_glucose)
+X_test_capped['GLUCOSE'] = X_test_capped['GLUCOSE'].fillna(percentile_70_glucose)
+
+with st.expander('Standardization'):
+    st.info('We standardized the data using StandardScaler.')
+
+# Standardization
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler
+numerical_cols_for_scaling = ['AGE', 'TOTCHOL', 'SYSBP', 'DIABP', 'CIGPDAY', 'BMI', 'GLUCOSE']
+binary_cols_for_passthrough = ['SEX', 'CURSMOKE', 'BPMEDS', 'PREVCHD', 'PREVAP', 'PREVMI', 'PREVSTRK', 'PREVHYP', 'HYPERTEN', 'GLUCOSE_missing']
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), numerical_cols_for_scaling),
+        ('bin', 'passthrough', binary_cols_for_passthrough)
+    ])
+X_train_processed_array = preprocessor.fit_transform(X_train_capped)
+X_test_processed_array = preprocessor.transform(X_test_capped)
+processed_feature_names = numerical_cols_for_scaling + binary_cols_for_passthrough
+X_train_processed = pd.DataFrame(X_train_processed_array, columns=processed_feature_names, index=X_train_capped.index)
+X_test_processed = pd.DataFrame(X_test_processed_array, columns=processed_feature_names, index=X_test_capped.index)
+
+st.markdown('## Data Visualization')
