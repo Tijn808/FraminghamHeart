@@ -41,11 +41,33 @@ with st.expander ('# Train-Test Split'):
 
 # splitting data set
 from sklearn.model_selection import train_test_split
+
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
 st.markdown('## Identifying Problems in the Basic Data')
+
+with st.expander ('Capping'):
+    st.info('We capped SYSBP, DIABP, TOTCHOL & BMI at plausible clinical ranges')
+    def apply_capping_rules(df):
+    # Define clinical ranges for capping
+        capping_rules = {
+        'SYSBP': {'min': 80, 'max': 260},
+        'DIABP': {'min': 40, 'max': 150},
+        'TOTCHOL': {'min': 80, 'max': 450},
+        'BMI': {'min': 15, 'max': 60}}
+        # GLUCOSE is explicitly excluded from capping
+
+        df_copy = df.copy()
+
+        for col, limits in capping_rules.items():
+            if col in df_copy.columns:
+                df_copy[col] = df_copy[col].clip(lower=limits['min'], upper=limits['max'])
+        return df_copy
+X_train_capped = apply_capping_rules(X_train)
+X_test_capped = apply_capping_rules(X_test)
+
 with st.expander ('# Missing Values'):
-    st.info ('Handling missing values')
+    st.info ('As you can see below there were a few variables with missing values:')
     st.dataframe(df.isnull().sum(), use_container_width=True, height=300)
 
 with st.expander ('Imputation'):
