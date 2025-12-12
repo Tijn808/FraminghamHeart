@@ -124,4 +124,71 @@ processed_feature_names = numerical_cols_for_scaling + binary_cols_for_passthrou
 X_train_processed = pd.DataFrame(X_train_processed_array, columns=processed_feature_names, index=X_train_capped.index)
 X_test_processed = pd.DataFrame(X_test_processed_array, columns=processed_feature_names, index=X_test_capped.index)
 
+import matplotlib.pyplot as plt
+import seaborn as sns
 st.markdown('## Data Visualization')
+with st.expander ('Data Distributions'):
+    with st.expander ('Categorical Variables'):
+        st.markdown ('#### Categorical Variables')
+        categorical_cols = ['SEX', 'CURSMOKE', 'BPMEDS', 'PREVCHD', 'PREVAP', 'PREVMI', 'PREVSTRK', 'PREVHYP', 'HYPERTEN', 'GLUCOSE_missing']
+        categorical_cols_present = [col for col in categorical_cols if col in X_train_processed.columns]
+        if not categorical_cols_present:
+            print("No categorical columns found for plotting.")
+        else:
+            selected_col = st.selectbox('Select a categorical column to visualize:', categorical_cols_present)
+            fig, ax = plt.subplots(figsize=(6, 4))
+            sns.countplot(x=X_train_processed[selected_col], ax=ax)
+            ax.set_title(f"Distribution of {selected_col}")
+            ax.set_xlabel(selected_col)
+            ax.set_ylabel("Frequency")
+            st.pyplot(fig)
+
+    with st.expander ('Numerical Variables'):
+        st.markdown ('#### Numerical Variables')
+        numerical_cols = ['AGE', 'TOTCHOL', 'SYSBP', 'DIABP', 'CIGPDAY', 'BMI', 'GLUCOSE']
+        numerical_cols_present = [col for col in numerical_cols if col in X_train_processed.columns]
+        if not numerical_cols_present:
+            print("No numerical columns found for plotting.")
+        else:
+            selected_col = st.selectbox('Select a numerical column to visualize:', numerical_cols_present)
+            fig, ax = plt.subplots(figsize=(6, 4))
+            sns.histplot(X_train_processed[selected_col], kde=True, ax=ax)
+            ax.set_title(f"Distribution of {selected_col}")
+            ax.set_xlabel(selected_col)
+            ax.set_ylabel("Frequency")
+            st.pyplot(fig)
+    
+            #shows the big imbalance in data:
+    with st.expander ('Diabetes Distribution'):
+        st.markdown('#### Diabetes Distribution')
+        if isinstance(y_train, pd.DataFrame):
+            y_train_series = y_train.iloc[:, 0]
+        else:
+            y_train_series = y_train
+        fig, ax = plt.subplots(figsize=(6, 4))  # << assign to fig!
+        sns.countplot(x=y_train_series, ax=ax)
+        ax.set_title('Distribution of DIABETES in Training Data')
+        ax.set_xlabel('DIABETES (0: No Diabetes, 1: Diabetes)')
+        ax.set_ylabel('Frequency')
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(['No Diabetes', 'Diabetes'])
+        st.pyplot(fig)
+
+with st.expander ('Boxplots of after capping'):
+    st.markdown('#### Boxplots after capping')
+    capped_columns = ['SYSBP', 'DIABP', 'TOTCHOL', 'BMI']
+    n_cols = 2 
+    n_rows = len(capped_columns)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 4 * n_rows))
+    fig.suptitle('Boxplots of Numerical Features Before and After Capping', y=1.02, fontsize=16)
+    for i, col in enumerate(capped_columns):
+        sns.boxplot(y=X_train[col], ax=axes[i, 0])
+        axes[i, 0].set_title(f'{col} - Before Capping')
+        axes[i, 0].set_ylabel(col)
+        sns.boxplot(y=X_train_capped[col], ax=axes[i, 1])
+        axes[i, 1].set_title(f'{col} - After Capping')
+        axes[i, 1].set_ylabel(col)
+    plt.tight_layout() 
+    st.pyplot(fig)
+
+       #MAKE IT DROPCHOICE
