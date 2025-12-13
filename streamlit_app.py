@@ -321,6 +321,7 @@ with st.expander ('Optimized Logistic Regression'):
     ax.set_yticklabels(['No Diabetes', 'Diabetes'])
     st.pyplot(fig)
     #metrics
+    st.markdown('#### Optimized Logistic Regression Metrics')
     optimized_df = pd.DataFrame({
     'Metric': ['Threshold', 'Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUC'],
     'Optimized Logistic Regression': [
@@ -425,6 +426,7 @@ with st.expander('Optimized Decision Tree'):
     plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout to prevent title overlap
     st.pyplot(fig)
     #metrics
+    st.markdown ('#### Optimized Decision Tree Metrics')
     optimized_dt_df = pd.DataFrame({
         'Metric': ['Threshold', 'Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUC'],
         'Optimized Decision Tree': [
@@ -489,7 +491,46 @@ with st.expander('Random Forest'):
         'Weighted Random Forest': "{:.4f}"}))
 
 with st.expander('Optimized Random Forest'):
-    st.write('????? tuning or threshold')
+    random_forest_weighted_model = RandomForestClassifier(random_state=42, class_weight='balanced')
+    random_forest_weighted_model.fit(X_train_processed, y_train)
+    y_proba_rf_weighted = random_forest_weighted_model.predict_proba(X_test_processed)[:, 1]
+    thresholds = np.arange(0, 1.01, 0.01)
+    best_threshold_f1_rf = 0
+    max_f1_score_rf = 0
+    for threshold in thresholds:
+        y_pred_thresholded_rf = (y_proba_rf_weighted >= threshold).astype(int)
+        current_f1_score = f1_score(y_test, y_pred_thresholded_rf)
+        if current_f1_score > max_f1_score_rf:
+            max_f1_score_rf = current_f1_score
+            best_threshold_f1_rf = threshold
+    y_pred_rf_optimized = (y_proba_rf_weighted >= best_threshold_f1_rf).astype(int)
+    accuracy_rf_optimized = accuracy_score(y_test, y_pred_rf_optimized)
+    precision_rf_optimized = precision_score(y_test, y_pred_rf_optimized)
+    recall_rf_optimized = recall_score(y_test, y_pred_rf_optimized)
+    f1_rf_optimized = f1_score(y_test, y_pred_rf_optimized)
+    auc_rf_optimized = roc_auc_score(y_test, y_proba_rf_weighted)
+    fig, axes = plt.subplots(figsize=(14, 6))
+    fig.suptitle('Weighted Random Forest Model Performance with Optimized F1-score Threshold', fontsize=16)
+    cm_rf_optimized = confusion_matrix(y_test, y_pred_rf_optimized)
+    sns.heatmap(cm_rf_optimized, annot=True, fmt='d', cmap='Blues')
+    ax.set_title('Optimized RF: Confusion Matrix')
+    ax.set_xlabel('Predicted')
+    ax.set_ylabel('Actual')
+    ax.set_xticklabels(['No Diabetes', 'Diabetes'])
+    ax.set_yticklabels(['No Diabetes', 'Diabetes'])
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    st.pyplot(fig)
+    metrics_rf_optimized = pd.DataFrame({
+    'Metric': ['Threshold', 'Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUC'],
+    'Optimized Random Forest': [
+        best_threshold_f1_rf,
+        accuracy_rf_optimized,
+        precision_rf_optimized,
+        recall_rf_optimized,
+        f1_rf_optimized,
+        auc_rf_optimized]})
+    st.markdown('#### Optimized Random Forest Metrics')
+    st.dataframe(metrics_rf_optimized.style.format({'Optimized Random Forest': "{:.4f}"}))
 
 with st.expander('LightGBM with Focal Loss'):
     import lightgbm as lgb
@@ -583,9 +624,32 @@ with st.expander ('Stacking Classifier'):
 
 with st.expander('Other Methods Tried'):
     st.markdown('### Balanced Bagging')
-    st.markdown('### OSS')
+    st.info('Balanced bagging is an ensemble method that builds many models on balanced samples so it can better predict rare classes. It had high recall (0.615) but low precision (0.213), with an F1-score of 0.316 and AUC of 0.846. Optimizing the threshold to 0.70 improved the F1-score to 0.427 and balanced precision (0.395) and recall (0.464). Compared to other models, it outperformed basic logistic regression but was still below the optimized logistic regression.')
+    st.markdown('### One-Sided Selection (OSS)')
+    st.info ('One-Sided Selection (OSS) is an undersampling technique used to handle imbalanced data sets. It removes noisy examples from the majority class. The goal is to reduce class imbalance. OSS showed slight improvements compared to the basic logistic regression (F1: 0.437, Recall: 0.302). Optimizing the classification threshold to 0.23 significantly improved the F1-score to 0.531, balancing precision (0.621) and recall (0.464), while maintaining an AUC of 0.871. It slightly outperformed the optimized logistic regression F1-score, but is still not considered the best as we consider recall more important.')
     st.markdown('### Voting Classifier')
+    st.info ('A voting classifier is an ensemble model that combines the prediction of multiple models. After optimizing the threshold to 0.46, the VotingClassifier achieved an F1-score of 0.464, Precision of 0.629, Recall of 0.368, and AUC of 0.875. It is behind on other models we have tried.')
 
 st.markdown('## Feature Engineering')
+with st.expander ('New Features'):
+    st.write ('Pulse Pressure: the difference between systolic and diastolic blood pressure (SYSBP - DIABP)')
+    st.divider()
+    st.write ('Mean Arterial Pressure: calculated as DIABP + 1/3 * (SYSBP - DIABP) to estimate average blood pressure')
+    st.divider()
+    st.write ('BMI Categories: converted the continuous BMI into groups: Underweight (<18.5), Normal (18.5–25), Overweight (25–30), and Obese (>=30)')
+with st.expander ('Results'):
+    st.info('After adding these new features, we retrained our models but did not observe significant improvements in performance metrics. Therefore, we proceeded with our original feature set.')
 
 st.markdown('## Conclusion')
+with st.expander ('Best Model'):
+    st.info('The optimized logistic regression model is the best-performing model in this study. With an F1-score of 0.529 it score slightly lower than the optimized one-sided selection model (F1=0.531), but its recall was higher (0.47). It is the most reliable and well-balanced model for this imbalanced classification task.')
+
+st.markdown('## Limitations & Future Work')
+with st.expander ('Limitations'):
+    st.write ('1. Data Imbalance: The dataset has a significant class imbalance, which can bias model performance towards the majority class.')
+    st.divider()
+    st.write ('2. Feature Limitations: The available features may not capture all relevant factors influencing diabetes risk, such as genetic predisposition or lifestyle factors that are not recorded in the dataset.')
+    st.divider()
+    st.write ('3. Model Generalizability: The models were trained and tested on a specific dataset, which may limit their applicability to other populations or settings.')
+with st.expander ('Future Work'):
+    st.info('We could further focus on deeper tuning of the excisting models to improve their performance. Also, validation the models on external data sets would help improve their stability and generalization. Finally, exploring additional features or data sources could enhance the models ability to predict diabetes risk.')
