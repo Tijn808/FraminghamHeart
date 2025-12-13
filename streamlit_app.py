@@ -17,7 +17,7 @@ with st.expander('# Research Question'):
 #  column selection
 st.markdown ('## Column Selection')
 with st.expander ('Selected Columns'):
-    st.write('Selected columns are: age, sex, totchol, sysbp, diabp, cursmoke, cigpday, BMI, bpmeds, prevchd, prevap, prevmi, prevstrk, prevhyp, glucose, hyperten & diabetes')
+    st.info('The columns we selected are: AGE, SEX, TOTCHOL (total cholesterol), SYSBP (systolic blood pressure (diastolic blood pressure), CURSMOKE (current smoker), CIGPDAY (cigarettes per day), BMI, BPMEDS (blood pressure medication), PREVCHD (history of coronary heart disease), PREVAP (history of angina pectoris), PREVMI (history of myocardial infarction), PREVSTRK (history of stroke), PREVHYP (history of hypertension), GLUCOS (glucose), HYPERTEN (hypertension) & DIABETES')
     #explain why these are chosen variables
     st.divider()
     data = pd.read_csv('https://raw.githubusercontent.com/LUCE-Blockchain/Databases-for-teaching/refs/heads/main/Framingham%20Dataset.csv')
@@ -37,7 +37,7 @@ y = df_relevant['DIABETES']
 
 st.markdown('## Train-Test Split')
 with st.expander ('# Train-Test Split'):
-    st.info('We split the dataset into a training and a testing set, using a 70-30 split.')
+    st.info('We split the dataset into a training and a testing set, using a 70-30 split. We chose this split to ensure a suffienct amount of diabetes in the test set, given the class imbalance in the Framingham Heart Study dataset. Stratified splitting preserves the class distribution in both sets, making our model performance evaluation more reliable.')
 
 # splitting data set
 from sklearn.model_selection import train_test_split
@@ -47,7 +47,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_
 st.markdown('## Identifying Problems in the Data')
 
 with st.expander ('Capping'):
-    st.info('We capped SYSBP, DIABP, TOTCHOL & BMI at plausible clinical ranges')
+    st.info('We capped SYSBP (systolic blood pressure), DIABP (diastolic blood pressure), TOTCHOL (total cholesterol) & BMI at plausible clinical ranges to reduce the influence of extreme outliers. Values that lie above these clinical ranges are often measurement errors or biological implausible, and can distort the model training. By capping these variables we can ensure that our models learn from realistic data while still preserving the underlying patterns in the data.')
     def apply_capping_rules(df):
     # Define clinical ranges for capping
         capping_rules = {
@@ -68,15 +68,20 @@ X_train_capped = apply_capping_rules(X_train)
 X_test_capped = apply_capping_rules(X_test)
 
 with st.expander ('# Missing Values'):
-    st.info ('As you can see below there were a few variables with missing values:')
+    st.info ('As you can see below there are a few variables with missing values:')
     st.dataframe(df.isnull().sum(), use_container_width=True, height=300)
 
 with st.expander ('Imputation'):
     st.info ('We used several types of imputation depending on the variable.')
-    st.write ('For BMI & TOTCHOL: median imputation')
-    st.write ('For CIGPDAY: if CURSMOKE is 0, 0 imputation for CIGPDAY, if CURSMOKE is 1, use median imputation for CIGPDAY')
-    st.write('For BPMEDS: 0 imputation')
-    st.write('For GLUCOSE: GLUCOSE_missing indicator column with missing values imputed using the 70th percentile of GLUCOSE from X_train_capped')
+    st.divider()
+    st.info ('For BMI & TOTCHOL: median imputation')
+    st.write ('We chose median imputation for BMI and TOTCHOL because these variables are continuous with some extreme values. Median imputation provides a central value, so we do not introduce bias in the dataset.')
+    st.info ('For CIGPDAY: if CURSMOKE = 0 we imputed zero; if CURSMOKE = 1 we imputed the median CIGPDAY')
+    st.write ('We imputed 0 for nonsmokers (CURSMOKE = 0), since they do not smoke. For smokers (CURSMOKE = 1) we imputed the median CIGPDAY value to represent a typical smoking habit.')
+    st.info ('For BPMEDS: 0 imputation')
+    st.write ('We imputed zero for BPMEDS, because a missing value is more likely to indicate that the individual is not on blood pressure medication, than that it is an unknown error. This approach minimizes the risk of falsely assuming medication use.')
+    st.info ('For GLUCOSE: we imputed the 70th percentile of GLUCOSE from X_train_capped')
+    st.write ('We calculated tehe 70th percentile of glucose values from the X_train_capped set. We chose the 70th percentile to avoid underestimating glucose levels for patients that might truly have elevated glucose.')
 
 #BMI imputation
 median_bmi = X_train_capped['BMI'].median()
@@ -106,8 +111,11 @@ percentile_70_glucose = X_train_capped['GLUCOSE'].quantile(0.80)
 X_train_capped['GLUCOSE'] = X_train_capped['GLUCOSE'].fillna(percentile_70_glucose)
 X_test_capped['GLUCOSE'] = X_test_capped['GLUCOSE'].fillna(percentile_70_glucose)
 
+with st.expander('Glucose Feature Engineering'):
+    st.info('We created a new binary feature "GLUCOSE_missing to help the model remember which glucose values were missing, because the missingness might not be at random. This preserves the predicitve power of our model.')
+
 with st.expander('Standardization'):
-    st.info('We standardized the data using StandardScaler.')
+    st.info('We standardized the data using StandardScaler to scale each feature around 0 with a standard deviation of 1. This ensures a even influence of all features; it keeps the relative differences between values intact while making all features comparable')
 
 # Standardization
 from sklearn.compose import ColumnTransformer
