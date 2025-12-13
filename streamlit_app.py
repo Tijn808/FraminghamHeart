@@ -63,6 +63,7 @@ with st.expander ('Capping'):
             if col in df_copy.columns:
                 df_copy[col] = df_copy[col].clip(lower=limits['min'], upper=limits['max'])
         return df_copy
+
 X_train_capped = apply_capping_rules(X_train)
 X_test_capped = apply_capping_rules(X_test)
 
@@ -479,7 +480,101 @@ with st.expander('Random Forest'):
 with st.expander('Random Forest with Threshold'):
     st.write('????? tuning or threshold')
 
-with st.expander('LightGBM'):
+with st.expander('LightGBM with Focal Loss'):
     import lightgbm as lgb
-    
+    def focal_loss_objective(y_true, y_pred):
+        alpha = 0.75  # Weight for the positive class
+        gamma = 1.5   # Focusing parameter
+        sigmoid_y_pred = 1 / (1 + np.exp(-y_pred))
+        epsilon = 1e-9
+        p = np.clip(sigmoid_y_pred, epsilon, 1 - epsilon)
+        pt = y_true * p + (1 - y_true) * (1 - p)
+        pt = np.maximum(epsilon, pt) # Ensure pt is never zero for np.log
+        alpha_t = y_true * alpha + (1 - y_true) * (1 - alpha)
+        grad = alpha_t * (p - y_true) * (1 + gamma * np.log(pt)) * (pt**gamma)
+        hess = alpha_t * (pt**gamma) * (
+            p * (1 - p) * (1 + gamma * np.log(pt)) -
+            gamma * (p - y_true)**2 / pt * p * (1 - p))
+        return -grad, -hess
+    lgbm_focal_model = lgb.LGBMClassifier(objective=focal_loss_objective, random_state=42,
+    n_estimators=100, n_jobs=-1)
+    lgbm_focal_model.fit(X_train_processed, y_train)
+    raw_scores_lgbm_focal = lgbm_focal_model.predict(X_test_processed)
+    y_proba_lgbm_focal = 1 / (1 + np.exp(-raw_scores_lgbm_focal))
+    y_pred_lgbm_focal = (y_proba_lgbm_focal >= 0.5).astype(int)
+    accuracy_lgbm_focal = accuracy_score(y_test, y_pred_lgbm_focal)
+    precision_lgbm_focal = precision_score(y_test, y_pred_lgbm_focal)
+    recall_lgbm_focal = recall_score(y_test, y_pred_lgbm_focal)
+    f1_lgbm_focal = f1_score(y_test, y_pred_lgbm_focal)
+    auc_lgbm_focal = roc_auc_score(y_test, y_proba_lgbm_focal)
+    fig, axes = plt.subplots(figsize=(14, 6))
+    fig.suptitle('LightGBM Model Performance with Custom Focal Loss', fontsize=16)
+    cm_lgbm_focal = confusion_matrix(y_test, y_pred_lgbm_focal)
+    sns.heatmap(cm_lgbm_focal, annot=True, fmt='d', cmap='Blues')
+    ax.set_title('LGBM Focal: Confusion Matrix')
+    ax.set_xlabel('Predicted')
+    ax.set_ylabel('Actual')
+    ax.set_xticklabels(['No Diabetes', 'Diabetes'])
+    ax.set_yticklabels(['No Diabetes', 'Diabetes'])
+    plt.tight_layout()
+    st.pyplot(fig)
+    st.markdown('#### Metrics for LightGBM with Focal Loss')
+    lgbm_focal_metrics_df = pd.DataFrame({
+    'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUC'],
+    'LightGBM (Focal Loss)': [
+        accuracy_lgbm_focal,
+        precision_lgbm_focal,
+        recall_lgbm_focal,
+        f1_lgbm_focal,
+        auc_lgbm_focal]})
+    st.dataframe(lgbm_focal_metrics_df.style.format({'LightGBM (Focal Loss)': '{:.4f}'}))
 
+with st.expander ('Stacking Classifier'):
+    base_estimators_stacking = [('log_reg', log_reg_model),               
+    ('log_reg_weighted', log_reg_weighted_model),
+    ('random_forest_weighted', random_forest_weighted_model)]
+    from sklearn.ensemble import StackingClassifier
+    from sklearn.linear_model import LogisticRegression
+    final_estimator_stacking = LogisticRegression(random_state=42, solver='liblinear')  
+    stacking_clf = StackingClassifier(estimators=base_estimators_stacking,
+    final_estimator=final_estimator_stacking,
+    cv=5, # Number of cross-validation folds to be used for fitting the estimators
+    stack_method='predict_proba', n_jobs=-1, passthrough=True)
+    stacking_clf.fit(X_train_processed, y_train)
+    y_pred_stacking = stacking_clf.predict(X_test_processed)
+    y_proba_stacking = stacking_clf.predict_proba(X_test_processed)[:, 1]
+    accuracy_stacking = accuracy_score(y_test, y_pred_stacking)
+    precision_stacking = precision_score(y_test, y_pred_stacking)
+    recall_stacking = recall_score(y_test, y_pred_stacking)
+    f1_stacking = f1_score(y_test, y_pred_stacking)
+    auc_stacking = roc_auc_score(y_test, y_proba_stacking)
+    fig, axes = plt.subplots(figsize=(14, 6))
+    fig.suptitle('StackingClassifier Model Performance', fontsize=16)
+    cm_stacking = confusion_matrix(y_test, y_pred_stacking)
+    sns.heatmap(cm_stacking, annot=True, fmt='d', cmap='Blues')
+    ax.set_title('StackingClassifier: Confusion Matrix')
+    ax.set_xlabel('Predicted')
+    ax.set_ylabel('Actual')
+    ax.set_xticklabels(['No Diabetes', 'Diabetes'])
+    ax.set_yticklabels(['No Diabetes', 'Diabetes'])
+    st.pyplot(fig)
+    st.markdown('#### Metrics for Stacking Classifier')
+    stacking_metrics_df = pd.DataFrame({
+    'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUC'],
+    'Stacking Classifier': [
+        accuracy_stacking,
+        precision_stacking,
+        recall_stacking,
+        f1_stacking,
+        auc_stacking]})
+    st.dataframe(
+    stacking_metrics_df.style.format({'Stacking Classifier': '{:.4f}'}))
+
+with st.expander('Other Methods Tried'):
+    st.markdown('### Balanced Bagging')
+    st.markdown('### OSS')
+    st.markdown('### Voting Classifier')
+
+st.markdown('## Feature Engineering')
+
+st.markdown('## Conclusion')
