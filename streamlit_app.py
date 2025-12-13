@@ -279,7 +279,7 @@ with st.expander ('Logistic Regression (unweighted vs. weighted)'):
         recall_log_reg_weighted,
         f1_log_reg_weighted,
         auc_log_reg_weighted]})
-    st.markdown("#### Model Performance Comparison Table")
+    st.markdown("#### Logistic Regression Comparison Table")
     st.dataframe(results_df.style.format({'Basic Logistic Regression': "{:.4f}",'Weighted Logistic Regression': "{:.4f}",}))
 
 with st.expander ('Logistic Regression (with threshold)'):
@@ -319,4 +319,167 @@ with st.expander ('Logistic Regression (with threshold)'):
         f1_log_reg_optimized,
         auc_log_reg_optimized]})
     st.dataframe(optimized_df.style.format({'Optimized Logistic Regression': "{:.4f}"}))
+
+with st.expander ('Decision Tree'):
+    from sklearn.tree import DecisionTreeClassifier
+    #unweighted
+    decision_tree_model = DecisionTreeClassifier(random_state=42)
+    decision_tree_model.fit(X_train_processed, y_train)
+    y_pred_decision_tree = decision_tree_model.predict(X_test_processed)
+    y_proba_decision_tree = decision_tree_model.predict_proba(X_test_processed)[:, 1]
+    accuracy_decision_tree = accuracy_score(y_test, y_pred_decision_tree)
+    precision_decision_tree = precision_score(y_test, y_pred_decision_tree)
+    recall_decision_tree = recall_score(y_test, y_pred_decision_tree)
+    f1_decision_tree = f1_score(y_test, y_pred_decision_tree)
+    auc_decision_tree = roc_auc_score(y_test, y_proba_decision_tree)
+    #weighted
+    decision_tree_weighted_model = DecisionTreeClassifier(random_state=42, class_weight='balanced')
+    decision_tree_weighted_model.fit(X_train_processed, y_train)
+    y_pred_decision_tree_weighted = decision_tree_weighted_model.predict(X_test_processed)
+    y_proba_decision_tree_weighted = decision_tree_weighted_model.predict_proba(X_test_processed)[:, 1]
+    accuracy_decision_tree_weighted = accuracy_score(y_test, y_pred_decision_tree_weighted)
+    precision_decision_tree_weighted = precision_score(y_test, y_pred_decision_tree_weighted)
+    recall_decision_tree_weighted = recall_score(y_test, y_pred_decision_tree_weighted)
+    f1_decision_tree_weighted = f1_score(y_test, y_pred_decision_tree_weighted)
+    auc_decision_tree_weighted = roc_auc_score(y_test, y_proba_decision_tree_weighted)
+    #confusion matrix
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    cm_decision_tree = confusion_matrix(y_test, y_pred_decision_tree)
+    sns.heatmap(cm_decision_tree, annot=True, fmt='d', cmap='Blues', ax=axes[0])
+    axes[0].set_title('Basic DT: Confusion Matrix')
+    axes[0].set_xlabel('Predicted')
+    axes[0].set_ylabel('Actual')
+    axes[0].set_xticklabels(['No Diabetes', 'Diabetes'])
+    axes[0].set_yticklabels(['No Diabetes', 'Diabetes'])
+    cm_decision_tree_weighted = confusion_matrix(y_test, y_pred_decision_tree_weighted)
+    sns.heatmap(cm_decision_tree_weighted, annot=True, fmt='d', cmap='Blues', ax=axes[1])
+    axes[1].set_title('Weighted DT: Confusion Matrix')
+    axes[1].set_xlabel('Predicted')
+    axes[1].set_ylabel('Actual')
+    axes[1].set_xticklabels(['No Diabetes', 'Diabetes'])
+    axes[1].set_yticklabels(['No Diabetes', 'Diabetes'])
+    plt.tight_layout()
+    st.pyplot(fig)
+    #Metrics
+    decisiontree_df = pd.DataFrame({
+    'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUC'],
+    'Basic Decision Tree': [accuracy_decision_tree,
+        precision_decision_tree,
+        recall_decision_tree,
+        f1_decision_tree,
+        auc_decision_tree],
+    'Weighted Decision Tree': [
+        accuracy_decision_tree_weighted,
+        precision_decision_tree_weighted,
+        recall_decision_tree_weighted,
+        f1_decision_tree_weighted,
+        auc_decision_tree_weighted]})
+    st.markdown('#### Decision Tree Comparison Table')
+    st.dataframe(decisiontree_df.style.format({'Model Performance Comparison Table': "{:.4f}"}))
+
+with st.expander('Decision Tree (with threshold)'):
+    thresholds = np.arange(0, 1.01, 0.01)   
+    best_threshold_f1_dt = 0
+    max_f1_score_dt = 0
+    best_threshold_gmean_dt = 0
+    max_gmean_score_dt = 0
+    for threshold in thresholds:
+        y_pred_thresholded_dt = (y_proba_decision_tree >= threshold).astype(int)
+        current_f1_score_dt = f1_score(y_test, y_pred_thresholded_dt)
+        sensitivity_dt = recall_score(y_test, y_pred_thresholded_dt, pos_label=1)
+        specificity_dt = recall_score(y_test, y_pred_thresholded_dt, pos_label=0)
+        current_gmean_score_dt = np.sqrt(sensitivity_dt * specificity_dt)
+    if current_f1_score_dt > max_f1_score_dt:
+        max_f1_score_dt = current_f1_score_dt
+        best_threshold_f1_dt = threshold
+    if current_gmean_score_dt > max_gmean_score_dt:
+        max_gmean_score_dt = current_gmean_score_dt
+        best_threshold_gmean_dt = threshold
+    y_pred_decision_tree_optimized = (y_proba_decision_tree >= best_threshold_f1_dt).astype(int)
+    accuracy_decision_tree_optimized = accuracy_score(y_test, y_pred_decision_tree_optimized)
+    precision_decision_tree_optimized = precision_score(y_test, y_pred_decision_tree_optimized)
+    recall_decision_tree_optimized = recall_score(y_test, y_pred_decision_tree_optimized)
+    f1_decision_tree_optimized = f1_score(y_test, y_pred_decision_tree_optimized)
+    auc_decision_tree_optimized = roc_auc_score(y_test, y_proba_decision_tree)
+    fig, axes = plt.subplots(figsize=(14, 6))
+    fig.suptitle('Basic Decision Tree Model Performance with Optimized F1-score Threshold', fontsize=16)
+    cm_decision_tree_optimized = confusion_matrix(y_test, y_pred_decision_tree_optimized)
+    sns.heatmap(cm_decision_tree_optimized, annot=True, fmt='d', cmap='Blues')
+    ax.set_title('Optimized DT: Confusion Matrix')
+    ax.set_xlabel('Predicted')
+    ax.set_ylabel('Actual')
+    ax.set_xticklabels(['No Diabetes', 'Diabetes'])
+    ax.set_yticklabels(['No Diabetes', 'Diabetes'])
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout to prevent title overlap
+    st.pyplot(fig)
+    #metrics
+    optimized_dt_df = pd.DataFrame({
+        'Metric': ['Threshold', 'Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUC'],
+        'Optimized Decision Tree': [
+        best_threshold_f1_dt,
+        accuracy_decision_tree_optimized,
+        precision_decision_tree_optimized,
+        recall_decision_tree_optimized,
+        f1_decision_tree_optimized,
+        auc_decision_tree_optimized]})
+    st.dataframe(optimized_dt_df.style.format({'Optimized Decision Tree': "{:.4f}"}))
+
+with st.expander('Random Forest'):
+    from sklearn.ensemble import RandomForestClassifier
+    # unweighted
+    random_forest_model = RandomForestClassifier(random_state=42)
+    random_forest_model.fit(X_train_processed, y_train)
+    y_pred_rf = random_forest_model.predict(X_test_processed)
+    y_proba_rf = random_forest_model.predict_proba(X_test_processed)[:, 1]
+    accuracy_rf = accuracy_score(y_test, y_pred_rf)
+    precision_rf = precision_score(y_test, y_pred_rf)
+    recall_rf = recall_score(y_test, y_pred_rf)
+    f1_rf = f1_score(y_test, y_pred_rf)
+    auc_rf = roc_auc_score(y_test, y_proba_rf)
+    #weighted
+    random_forest_weighted_model = RandomForestClassifier(random_state=42, class_weight='balanced')
+    random_forest_weighted_model.fit(X_train_processed, y_train)
+    y_pred_rf_weighted = random_forest_weighted_model.predict(X_test_processed)
+    y_proba_rf_weighted = random_forest_weighted_model.predict_proba(X_test_processed)[:, 1]
+    accuracy_rf_weighted = accuracy_score(y_test, y_pred_rf_weighted)
+    precision_rf_weighted = precision_score(y_test, y_pred_rf_weighted)
+    recall_rf_weighted = recall_score(y_test, y_pred_rf_weighted)
+    f1_rf_weighted = f1_score(y_test, y_pred_rf_weighted)
+    auc_rf_weighted = roc_auc_score(y_test, y_proba_rf_weighted)
+    #confusion matrix
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig.suptitle('Basic Random Forest Model Performance', fontsize=16)
+    cm_rf = confusion_matrix(y_test, y_pred_rf)
+    sns.heatmap(cm_rf, annot=True, fmt='d', cmap='Blues', ax=axes[0])
+    axes[0].set_title('Basic RF: Confusion Matrix')
+    axes[0].set_xlabel('Predicted')
+    axes[0].set_ylabel('Actual')
+    axes[0].set_xticklabels(['No Diabetes', 'Diabetes'])
+    axes[0].set_yticklabels(['No Diabetes', 'Diabetes'])
+    cm_rf_weighted = confusion_matrix(y_test, y_pred_rf_weighted)
+    sns.heatmap(cm_rf_weighted, annot=True, fmt='d', cmap='Blues', ax=axes[1])
+    axes[1].set_title('Weighted RF: Confusion Matrix')
+    axes[1].set_xlabel('Predicted')
+    axes[1].set_ylabel('Actual')
+    axes[1].set_xticklabels(['No Diabetes', 'Diabetes'])
+    axes[1].set_yticklabels(['No Diabetes', 'Diabetes'])
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    st.pyplot(fig)
+    #metrics
+    st.markdown('#### Random Forest Comparison Table')
+    rf_metrics_df = pd.DataFrame({
+    'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUC'],
+    'Basic Random Forest': [accuracy_rf, precision_rf, recall_rf, f1_rf, auc_rf],
+    'Weighted Random Forest': [accuracy_rf_weighted, precision_rf_weighted, recall_rf_weighted, f1_rf_weighted, auc_rf_weighted]})
+    st.dataframe(
+    rf_metrics_df.style.format({
+        'Basic Random Forest': "{:.4f}",
+        'Weighted Random Forest': "{:.4f}"}))
+
+with st.expander('Random Forest with Threshold'):
+    st.write('????? tuning or threshold')
+
+with st.expander('LightGBM'):
+    import lightgbm as lgb
+    
 
