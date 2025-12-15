@@ -220,7 +220,7 @@ X_test_processed = pd.DataFrame(X_test_processed_array, columns=processed_featur
 
 #Logistic Regression
 st.markdown('## Model Training')
-with st.expander ('Logistic Regression (unweighted vs. weighted)'):
+with st.expander ('Logistic Regression'):
     st.info('We started with training a logistic regression model to predict diabetes. We also trained a weighted logistic regression model to account for the class imbalance in the data.')
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
