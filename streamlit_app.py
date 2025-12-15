@@ -13,7 +13,7 @@ with st.expander('# Research Question'):
     st.markdown ('## Initial Research Question')
     st.info('Can we predict the onset of diabetes in the Framingham Heart Study population using baseline demographic, lifestyle, and clinical variables?')
     st.divider()
-    st.write ('An analysis of existing studies showed that diabetes has not been extensively investigated in previous research. Recognizing this gap, we aimed to contribute to a deeper understanding of this condition.')
+    st.write ('An analysis of existing studies showed that diabetes has not been extensively investigated in previous research. Recognizing this gap, we aimed to contribute to a deeper understanding of this condition while also assessing whether the dataset could be used for alternative research applications.')
     st.markdown ('## Redefined Research Question')
     st.info('Can we identify individuals currently positive for or at high risk of diabetes within the Framingham Heart Study population, using readily available baseline demographic, lifestyle, and clinical variables such as age, sex, BMI, blood pressure, cholesterol, glucose, and smoking status?')
 
@@ -50,7 +50,12 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_
 st.markdown('## Identifying Problems in the Data')
 
 with st.expander ('Capping'):
-    st.info('We capped SYSBP (systolic blood pressure), DIABP (diastolic blood pressure), TOTCHOL (total cholesterol) & BMI at plausible clinical ranges to reduce the influence of extreme outliers. Values that lie above these clinical ranges are often measurement errors or biological implausible, and can distort the model training. By capping these variables we can ensure that our models learn from realistic data while still preserving the underlying patterns in the data.')
+    st.info('We capped SYSBP (systolic blood pressure), DIABP (diastolic blood pressure), TOTCHOL (total cholesterol) & BMI at plausible clinical ranges to reduce the influence of extreme outliers.')
+    st.write('For SYSBP: 80 - 260 mmHg')
+    st.write('For DIABP: 40 - 150 mmHg')
+    st.write('For TOTCHOL: 80 - 450 mg/dL')
+    st.write ('For BMI: 15 - 60 kg/m²')
+    st.info ('Values that lie above these clinical ranges are often measurement errors or biological implausible, and can distort the model training. By capping these variables we can ensure that our models learn from realistic data while still preserving the underlying patterns in the data.')
     def apply_capping_rules(df):
     # Define clinical ranges for capping
         capping_rules = {
@@ -58,8 +63,6 @@ with st.expander ('Capping'):
         'DIABP': {'min': 40, 'max': 150},
         'TOTCHOL': {'min': 80, 'max': 450},
         'BMI': {'min': 15, 'max': 60}}
-        # GLUCOSE is explicitly excluded from capping
-
         df_copy = df.copy()
 
         for col, limits in capping_rules.items():
@@ -78,7 +81,7 @@ with st.expander ('Imputation'):
     st.info ('We used several types of imputation depending on the variable.')
     st.divider()
     st.info ('For BMI & TOTCHOL: median imputation')
-    st.write ('We chose median imputation for BMI and TOTCHOL because these variables are continuous with some extreme values. Median imputation provides a central value, so we do not introduce bias in the dataset.')
+    st.write ('We chose median imputation for BMI and TOTCHOL because these variables are continuous with some extreme values. We examined the data distributions and considered typical real-world BMI and total cholesterol values. Median imputation provides a central and robust value, so we do not introduce bias in the dataset.')
     st.info ('For CIGPDAY: if CURSMOKE = 0 we imputed zero; if CURSMOKE = 1 we imputed the median CIGPDAY')
     st.write ('We imputed 0 for nonsmokers (CURSMOKE = 0), since they do not smoke. For smokers (CURSMOKE = 1) we imputed the median CIGPDAY value to represent a typical smoking habit.')
     st.info ('For BPMEDS: 0 imputation')
@@ -632,11 +635,14 @@ with st.expander('Other Methods Tried'):
 
 st.markdown('## Feature Engineering')
 with st.expander ('New Features'):
-    st.write ('Pulse Pressure: the difference between systolic and diastolic blood pressure (SYSBP - DIABP)')
+    st.info ('Pulse Pressure: the difference between systolic and diastolic blood pressure (SYSBP - DIABP)')
+    st.write('Pulse pressure gives insight into arterial stiffness and vascular health, which are often affected in people with diabetes. Higher pulse pressure is associated with increased cardiovascular risk, a complication that often occurs in diabetic patients.')
     st.divider()
-    st.write ('Mean Arterial Pressure: calculated as DIABP + 1/3 * (SYSBP - DIABP) to estimate average blood pressure')
+    st.info ('Mean Arterial Pressure: calculated as DIABP + 1/3 * (SYSBP - DIABP) to estimate average blood pressure')
+    st.write ('Mean arterial pressure reflects the overall blood flow and pressure on organs, helping to assess the impact of hypertension, which frequently co-occurs with diabetes')
     st.divider()
-    st.write ('BMI Categories: converted the continuous BMI into groups: Underweight (<18.5), Normal (18.5–25), Overweight (25–30), and Obese (>=30)')
+    st.info ('BMI Categories: converted the continuous BMI into groups: Underweight (<18.5), Normal (18.5–25), Overweight (25–30), and Obese (>=30)')
+    st.write ('Obesity is a major risk factor for type 2 diabetes, so categorizing BMI helps identify individuals at higher risk and allows for clearer analysis of how body weight relates to diabetes and its complications.')
 with st.expander ('Results'):
     st.info('After adding these new features, we retrained our models but did not observe significant improvements in performance metrics. Therefore, we proceeded with our original feature set.')
 
