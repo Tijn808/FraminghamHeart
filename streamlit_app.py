@@ -87,7 +87,7 @@ with st.expander ('Imputation'):
     st.info ('For BPMEDS: 0 imputation')
     st.write ('We imputed zero for BPMEDS, because a missing value is more likely to indicate that the individual is not on blood pressure medication, than that it is an unknown error. This approach minimizes the risk of falsely assuming medication use.')
     st.info ('For GLUCOSE: we imputed the 70th percentile of GLUCOSE from X_train_capped')
-    st.write ('We calculated tehe 70th percentile of glucose values from the X_train_capped set. We chose the 70th percentile to avoid underestimating glucose levels for patients that might truly have elevated glucose.')
+    st.write ('We calculated the 70th percentile of glucose values from the X_train_capped set. We chose the 70th percentile to avoid underestimating glucose levels for patients that might truly have elevated glucose.')
 
 #BMI imputation
 median_bmi = X_train_capped['BMI'].median()
@@ -118,7 +118,7 @@ X_train_capped['GLUCOSE'] = X_train_capped['GLUCOSE'].fillna(percentile_70_gluco
 X_test_capped['GLUCOSE'] = X_test_capped['GLUCOSE'].fillna(percentile_70_glucose)
 
 with st.expander('Glucose Feature Engineering'):
-    st.info('We created a new binary feature "GLUCOSE_missing to help the model remember which glucose values were missing, because the missingness might not be at random. This preserves the predicitve power of our model.')
+    st.info('We created a new binary feature "GLUCOSE_missing" to help the model remember which glucose values were missing, because the missingness might not be at random. This preserves the predicitve power of our model.')
 
 with st.expander('Standardization'):
     st.info('We standardized the data using StandardScaler to scale each feature around 0 with a standard deviation of 1. This ensures a even influence of all features; it keeps the relative differences between values intact while making all features comparable')
@@ -643,6 +643,7 @@ with st.expander ('New Features'):
     st.divider()
     st.info ('BMI Categories: converted the continuous BMI into groups: Underweight (<18.5), Normal (18.5–25), Overweight (25–30), and Obese (>=30)')
     st.write ('Obesity is a major risk factor for type 2 diabetes, so categorizing BMI helps identify individuals at higher risk and allows for clearer analysis of how body weight relates to diabetes and its complications.')
+
 with st.expander ('Results'):
     st.info('After adding these new features, we retrained our models but did not observe significant improvements in performance metrics. Therefore, we proceeded with our original feature set.')
 
